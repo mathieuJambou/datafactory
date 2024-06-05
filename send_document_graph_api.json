@@ -1,0 +1,151 @@
+{
+    "name": "CycleEmail",
+    "properties": {
+        "activities": [
+            {
+                "name": "GET AAD Token With Graph Scope",
+                "type": "WebActivity",
+                "state": "Inactive",
+                "onInactiveMarkAs": "Succeeded",
+                "dependsOn": [
+                    {
+                        "activity": "RetrieveDocument",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.00:01:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "method": "POST",
+                    "headers": {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    "httpRequestTimeout": "00:01:00",
+                    "url": {
+                        "value": "@concat('https://login.microsoftonline.com/',pipeline().parameters.AzureTenantId,'/oauth2/v2.0/token')",
+                        "type": "Expression"
+                    },
+                    "body": {
+                        "value": "@concat('\nclient_id=',pipeline().parameters.AzureAppClientId,'\n&client_secret=',pipeline().parameters.AzureAppClientSecret,'\n&scope=https://graph.microsoft.com/.default\n&grant_type=client_credentials'\n)",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "POST Graph Send Mail",
+                "type": "WebActivity",
+                "state": "Inactive",
+                "onInactiveMarkAs": "Succeeded",
+                "dependsOn": [
+                    {
+                        "activity": "GET AAD Token With Graph Scope",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "method": "POST",
+                    "headers": {
+                        "Authorization": {
+                            "value": "@concat(string(activity('Get AAD Token With Graph Scope').output.token_type),' ',string(activity('Get AAD Token With Graph Scope').output.access_token))",
+                            "type": "Expression"
+                        },
+                        "Content-Type": "application/json"
+                    },
+                    "url": {
+                        "value": "@concat('https://graph.microsoft.com/v1.0/users/',pipeline().parameters.EmailSender,'/sendMail')",
+                        "type": "Expression"
+                    },
+                    "body": {
+                        "value": "@concat(\n    '{\n    \"message\": {\n        \"toRecipients\": [\n            {\n                \"emailAddress\": {\n                    \"address\": \"', pipeline().parameters.EmailRecipient, '\"\n                    }\n            }\n        ],\n        \"subject\": \"', pipeline().parameters.EmailSubject, '\",\n        \"importance\": \"normal\",\n        \"body\": {\n            \"contentType\" : \"Text\",\n            \"content\": \"', activity('RetrieveDocument').output.Response, '\"\n         }\n    },\n    \"SaveToSentItems\": ', pipeline().parameters.EmailSaveToSentItems, '\n}'\n)",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "RetrieveDocument",
+                "type": "WebActivity",
+                "state": "Inactive",
+                "onInactiveMarkAs": "Succeeded",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "method": "GET",
+                    "headers": {
+                        "content-Type": "application/json",
+                        "x-ms-version": "2020-04-08"
+                    },
+                    "url": "https://containername.blob.core.windows.net/blobname/filename.txt",
+                    "authentication": {
+                        "type": "MSI",
+                        "resource": "https://storage.azure.com/"
+                    }
+                }
+            }
+        ],
+        "parameters": {
+            "AzureTenantId": {
+                "type": "String",
+                "defaultValue": "aaaaaaaa-bbbb-cccc-dddd-xxxxxxxxxxxx"
+            },
+            "AzureAppClientId": {
+                "type": "String",
+                "defaultValue": "aaaaaaaa-bbbb-cccc-dddd-xxxxxxxxxxxx"
+            },
+            "AzureAppClientSecret": {
+                "type": "String",
+                "defaultValue": "clientsecret"
+            },
+            "EmailSender": {
+                "type": "string",
+                "defaultValue": "myemail@gmail.com"
+            },
+            "EmailRecipient": {
+                "type": "string",
+                "defaultValue": "myemail@gmail.com"
+            },
+            "EmailSubject": {
+                "type": "string",
+                "defaultValue": "test"
+            },
+            "EmailContentHTML": {
+                "type": "string"
+            },
+            "EmailSaveToSentItems": {
+                "type": "string",
+                "defaultValue": "true"
+            }
+        },
+        "variables": {
+            "test": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2022-09-15T12:16:08Z"
+    }
+}

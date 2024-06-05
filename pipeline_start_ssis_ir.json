@@ -1,0 +1,142 @@
+{
+    "name": "Daily-Start-SSIS-IR",
+    "properties": {
+        "activities": [
+            {
+                "name": "Start Azure-SSIS IR",
+                "description": "Call REST API to start Azure-SSIS IR.",
+                "type": "WebActivity",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "7.00:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "method": "POST",
+                    "url": {
+                        "value": "@concat(pipeline().globalParameters.SSIS_IR_Base_URL,'start?api-version=2018-06-01')",
+                        "type": "Expression"
+                    },
+                    "body": {
+                        "message": "Start my IR"
+                    },
+                    "authentication": {
+                        "type": "MSI",
+                        "resource": "https://management.azure.com"
+                    }
+                }
+            },
+            {
+                "name": "OnSuccess-Check-If-Manual-Trigger",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Start Azure-SSIS IR",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(toLower(pipeline().parameters.onsuccess),'manual')",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "OnSuccess",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "7.00:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "url": {
+                                    "value": "@pipeline().parameters.onsuccess",
+                                    "type": "Expression"
+                                },
+                                "body": {
+                                    "value": "@json(concat('\n{\n    \"pipelineName\": \"',\n\tpipeline().Pipeline,\n\t'\",',\n    '\"pipelineRunId\": \"',\npipeline().RunId,\n\t'\",',\n\t'\"pipelineContext\": \"',\n'\"}}'))",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "OnError-Check-If-Manual-Trigger",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Start Azure-SSIS IR",
+                        "dependencyConditions": [
+                            "Failed"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@equals(toLower(pipeline().parameters.onerror),'manual')",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "OnError",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "7.00:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "url": {
+                                    "value": "@pipeline().parameters.onerror",
+                                    "type": "Expression"
+                                },
+                                "body": {
+                                    "value": "@json(concat('\n{\n    \"pipelineName\": \"',\n\tpipeline().Pipeline,\n\t'\",',\n    '\"pipelineRunId\": \"',\npipeline().RunId,\n'\",',\n'\"pipelineOutput\": ',\nstring(activity('Start Azure-SSIS IR').output),\n'}'))",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "envname": {
+                "type": "string",
+                "defaultValue": "QA"
+            },
+            "onsuccess": {
+                "type": "string",
+                "defaultValue": "manual"
+            },
+            "onerror": {
+                "type": "string",
+                "defaultValue": "manual"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2024-05-21T17:02:02Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
