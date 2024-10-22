@@ -1,0 +1,86 @@
+{
+	"client": {
+		"type": "string",
+		"value": "clientabc"
+	},
+	"env": {
+		"type": "string",
+		"value": "dev"
+	},
+	"region": {
+		"type": "string",
+		"value": "cace"
+	},
+	"DBdestination_apiVersion": {
+		"type": "string",
+		"value": "2022-11-01-preview"
+	},
+	"subscriptionId": {
+		"type": "string",
+		"value": "xxxxxxxx-yyyy-zzzz-aaaa-bbbbbbbbbbbb"
+	},
+	"DBdestination_resourceGroupName": {
+		"type": "string",
+		"value": "rg-clientabc-cace"
+	},
+	"DBdestination_databaseName": {
+		"type": "string",
+		"value": "clientabc-sqldb-source-destination-dev-cace"
+	},
+	"DBdestination_serverName": {
+		"type": "string",
+		"value": "sql-clientabc-source-dev-cace.database.windows.net"
+	},
+	"DBdestination_dbconfig_process": {
+		"type": "object",
+		"value": "{ \"sku\": { \"name\": \"GP_S_Gen5\", \"tier\": \"GeneralPurpose\", \"family\": \"Gen5\", \"capacity\": 10 },\"properties\": {\"maxSizeBytes\": 68719476736, \"minCapacity\": 1.25,} }"
+	},
+	"DBdestination_dbConfig_default": {
+		"type": "object",
+		"value": "{ \"sku\": { \"name\": \"GP_S_Gen5\", \"tier\": \"GeneralPurpose\", \"family\": \"Gen5\", \"capacity\": 1 }, \"properties\": {\"maxSizeBytes\": 68719476736, \"minCapacity\": 0.5, } }"
+	},
+	"DataFactoryStorageAccountName": {
+		"type": "object",
+		"value": "sadfclientabcdevcace"
+	},
+	"DataFactoryStorageAccountKey": {
+		"type": "string",
+		"value": "DataFactoryStorageAccountKey"
+	},
+	"SSISPackageStoreLocation": {
+		"type": "string",
+		"value": "\\\\saclientabcdevcace.file.core.windows.net\\ssispackagestore\\"
+	},
+	"SSISLoggingLocation": {
+		"type": "string",
+		"value": "\\\\saclientabcdevcace.file.core.windows.net\\ssisexecutionlogs\\"
+	},
+	"SSIS_IR_Base_URL": {
+		"type": "string",
+		"value": "https://management.azure.com/subscriptions/xxxxxxxx-yyyy-zzzz-aaaa-bbbbbbbbbbbb/resourcegroups/rg-clientabc-internal-cace/providers/Microsoft.DataFactory/factories/df-clientabc-dev-cace/integrationRuntimes/ssis-integration-runtime/"
+	},
+	"SSISExtractLocation": {
+		"type": "string",
+		"value": "\\\\saclientabcdevcace.file.core.windows.net\\extracts\\"
+	},
+	"databaseName": {
+		"type": "string",
+		"value": "clientabc-QA"
+	},
+	"serverName": {
+		"type": "string",
+		"value": "sql.ca-dev.com"
+	},
+	"userName": {
+		"type": "string",
+		"value": "clientabc-QA"
+	},
+	"DBdestination_userName": {
+		"type": "string",
+		"value": "SSISAdmin"
+	},
+	"DBdestination_serverName_Management": {
+		"type": "string",
+		"value": "sql-clientabc-source-dev-cace"
+	}
+}

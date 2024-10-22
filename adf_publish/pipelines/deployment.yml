@@ -1,0 +1,173 @@
+trigger: none
+
+variables:
+  poolAgentName: "ci-agent-pool-windows"
+  buildWorkingDirectory: $(Build.SourcesDirectory)
+  serviceConnectionDev: 'spn-dev'
+  serviceConnectionUat: 'spn-uat'
+
+
+  subscriptionIdDev: 'xxxxxxxx-yyyy-zzzz-aaaa-bbbbbbbbbbbb'
+  subscriptionIdUat: 'xxxxxxxx-yyyy-zzzz-aaaa-bbbbbbbbbbbb'
+
+parameters:
+  - name: deployQA
+    displayName: 'Deploy in QA'
+    type: boolean
+    default: false
+
+  - name: deployUAT
+    displayName: 'Deploy in UAT'
+    type: boolean
+    default: false
+
+stages:
+  - stage: QA
+    dependsOn: []
+    condition: eq( ${{ parameters.deployQA}}, true) 
+    jobs:
+      - deployment: Deploy_QA
+        environment: qa
+        displayName: 'Deploy DF in QA'
+        workspace:
+          clean: all
+        
+        pool:
+          name: $(poolAgentName)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  
+                - task: AzurePowerShell@5
+                  displayName: 'Stop ADF triggers'
+                  inputs:
+                    azureSubscription: $(serviceConnectionDev)
+                    ScriptType: 'FilePath'
+                    ScriptPath: '$(System.DefaultWorkingDirectory)/pipelines/scripts/maintenance.ps1'
+                    ScriptArguments:  -armTemplate "$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateForFactory.json" 
+                                      -ResourceGroupName "rg-internal-cace" 
+                                      -DataFactoryName "df-qa-cace" 
+                                      -predeployment $true 
+                                      -deleteDeployment $false
+                    azurePowerShellVersion: 'LatestVersion'
+
+                - task: AzureResourceManagerTemplateDeployment@3
+                  displayName: 'ARM Template deployment'
+                  inputs:
+                    deploymentScope: 'Resource Group'
+                    azureResourceManagerConnection: $(serviceConnectionDev)
+                    subscriptionId:  $(subscriptionIdDev)
+                    action: 'Create Or Update Resource Group'
+                    resourceGroupName: 'rg-internal-cace'
+                    location: 'East US 2'
+                    templateLocation: 'Linked artifact'
+                    csmFile: '$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateForFactory.json'
+                    csmParametersFile: '$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateParametersForFactory.json'
+                    overrideParameters: -factoryName "df-qa-cace"
+                                        -Source_DB_connectionString "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=sql-datasource-qa-cace.database.windows.net;Initial Catalog=sqldb-datasource-source-qa-cace"
+                                        -Destination_DB_connectionString "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=sql-datasource-qa-cace.database.windows.net;Initial Catalog=sqldb-datasource-destination-qa-cace"
+                                        -ApplicationKeyVault_properties_typeProperties_baseUrl "https://kv-app-qa-cace.vault.azure.net/"
+                                        -AdminKeyVault_properties_typeProperties_baseUrl "https://kv-adm-qa-cace.vault.azure.net/"
+                                        -ssis-integration-runtime_properties_typeProperties_computeProperties_vNetProperties_subnetId "/subscriptions/xxxxxxxx-yyyy-zzzz-aaaa-bbbbbbbbbbbb/resourceGroups/rg-glb-cace/providers/Microsoft.Network/virtualNetworks/vnet-dev-cace/subnets/DataFactorySubnet"
+                    deploymentMode: 'Incremental'
+
+                - task: AzurePowerShell@5
+                  displayName: 'Update Global Parameters'
+                  inputs:
+                    azureSubscription: $(serviceConnectionDev)
+                    ScriptType: 'FilePath'
+                    ScriptPath: '$(System.DefaultWorkingDirectory)/pipelines/scripts/GlobalParametersUpdate.ps1'
+                    ScriptArguments:  -globalParametersFilePath "$(System.DefaultWorkingDirectory)/df-dev-cace/globalParameters/df-qa-cace_GlobalParameters.json" 
+                                      -ResourceGroupName "rg-internal-cace"
+                                      -DataFactoryName "df-qa-cace" 
+                    azurePowerShellVersion: 'LatestVersion'
+
+                - task: AzurePowerShell@5
+                  displayName: 'Clean resources and start ADF triggers'
+                  inputs:
+                    azureSubscription: $(serviceConnectionDev)
+                    ScriptType: 'FilePath'
+                    ScriptPath: '$(System.DefaultWorkingDirectory)/pipelines/scripts/maintenance.ps1'
+                    ScriptArguments:  -armTemplate "$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateForFactory.json" 
+                                      -ResourceGroupName "rg-internal-cace" 
+                                      -DataFactoryName "df-qa-cace" 
+                                      -predeployment $false 
+                                      -deleteDeployment $false
+                    azurePowerShellVersion: 'LatestVersion'
+                    
+  - stage: UAT
+    dependsOn: []
+    condition: eq( ${{ parameters.deployUAT}}, true) 
+    jobs:
+      - deployment: Deploy_UAT
+        environment: uat
+        displayName: 'Deploy DF in UAT'
+        workspace:
+          clean: all
+        
+        pool:
+          name: $(poolAgentName)
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  
+                - task: AzurePowerShell@5
+                  displayName: 'Stop ADF triggers'
+                  inputs:
+                    azureSubscription: $(serviceConnectionUat)
+                    ScriptType: 'FilePath'
+                    ScriptPath: '$(System.DefaultWorkingDirectory)/pipelines/scripts/maintenance.ps1'
+                    ScriptArguments:  -armTemplate "$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateForFactory.json" 
+                                      -ResourceGroupName "rg-internal-cace" 
+                                      -DataFactoryName "df-uat-cace" 
+                                      -predeployment $true 
+                                      -deleteDeployment $false
+                    azurePowerShellVersion: 'LatestVersion'
+
+                - task: AzureResourceManagerTemplateDeployment@3
+                  displayName: 'ARM Template deployment'
+                  inputs:
+                    deploymentScope: 'Resource Group'
+                    azureResourceManagerConnection: $(serviceConnectionUat)
+                    subscriptionId: $(subscriptionIdUat)
+                    action: 'Create Or Update Resource Group'
+                    resourceGroupName: 'rg-internal-cace'
+                    location: 'East US 2'
+                    templateLocation: 'Linked artifact'
+                    csmFile: '$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateForFactory.json'
+                    csmParametersFile: '$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateParametersForFactory.json'
+                    overrideParameters: -factoryName "df-uat-cace"
+                                        -Source_DB_connectionString "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=sql-datasource-uat-cace.database.windows.net;Initial Catalog=sqldb-datasource-source-uat-cace"
+                                        -Destination_DB_connectionString "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=sql-datasource-uat-cace.database.windows.net;Initial Catalog=sqldb-datasource-destination-uat-cace"
+                                        -ApplicationKeyVault_properties_typeProperties_baseUrl "https://kv-app-uat-cace.vault.azure.net/"
+                                        -AdminKeyVault_properties_typeProperties_baseUrl "https://kv-adm-uat-cace.vault.azure.net/"
+                                        -ssis-integration-runtime_properties_typeProperties_computeProperties_vNetProperties_subnetId "/subscriptions/xxxxxxxx-yyyy-zzzz-aaaa-bbbbbbbbbbbb/resourceGroups/rg-glb-cace/providers/Microsoft.Network/virtualNetworks/vnet-uat-cace/subnets/DataFactorySubnet"
+                    deploymentMode: 'Incremental'
+
+                - task: AzurePowerShell@5
+                  displayName: 'Update Global Parameters'
+                  inputs:
+                    azureSubscription: $(serviceConnectionUat)
+                    ScriptType: 'FilePath'
+                    ScriptPath: '$(System.DefaultWorkingDirectory)/pipelines/scripts/GlobalParametersUpdate.ps1'
+                    ScriptArguments:  -globalParametersFilePath "$(System.DefaultWorkingDirectory)/df-dev-cace/globalParameters/df-uat-cace_GlobalParameters.json" 
+                                      -ResourceGroupName "rg-internal-cace"
+                                      -DataFactoryName "df-uat-cace" 
+                    azurePowerShellVersion: 'LatestVersion'
+
+                - task: AzurePowerShell@5
+                  displayName: 'Clean resources and start ADF triggers'
+                  inputs:
+                    azureSubscription: $(serviceConnectionUat)
+                    ScriptType: 'FilePath'
+                    ScriptPath: '$(System.DefaultWorkingDirectory)/pipelines/scripts/maintenance.ps1'
+                    ScriptArguments:  -armTemplate "$(System.DefaultWorkingDirectory)/df-dev-cace/ARMTemplateForFactory.json" 
+                                      -ResourceGroupName "rg-internal-cace" 
+                                      -DataFactoryName "df-uat-cace" 
+                                      -predeployment $false 
+                                      -deleteDeployment $false
+                    azurePowerShellVersion: 'LatestVersion'
